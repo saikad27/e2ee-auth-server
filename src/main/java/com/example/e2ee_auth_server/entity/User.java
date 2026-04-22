@@ -1,25 +1,38 @@
 package com.example.e2ee_auth_server.entity;
 
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.example.e2ee_auth_server.component.UserDTO;
+import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name="users")
 public class User implements UserDetails {
 
-    public User(String userId,String username,String password,List<GrantedAuthority> roles,String email,String aadhaar){
+    public User(){
+
+    }
+    public User(UserDTO userDTO){
+        this.userId = UUID.randomUUID().toString();
+        this.username = userDTO.getUsername();
+        this.email = userDTO.getEmail();
+        this.password = userDTO.getPassword();
+        this.roles = Set.of("ROLE_USER");
+        this.aadhaar = userDTO.getAadhaar();
+    }
+    public User(String userId,String username,String password,List<String> roles,String email,String aadhaar){
         this.userId = userId;
         this.username = username;
         this.password = password;
-        this.roles = roles;
+        this.roles = Set.of("ROLE_USER");;
         this.email = email;
         this.aadhaar = aadhaar;
     }
@@ -28,11 +41,14 @@ public class User implements UserDetails {
     private String userId;
     private String username;
     private String password;
-    private List<GrantedAuthority> roles;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role", columnDefinition = "VARCHAR(50)")
+    private Set<String> roles;
     private String email;
 
     @Column(unique=true)
-    private final String aadhaar;
+    private String aadhaar;
 
     public String getUserId() {
         return userId;
@@ -52,7 +68,9 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles;
+        return roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     public String getPassword() {
@@ -64,7 +82,7 @@ public class User implements UserDetails {
     }
 
 
-    public void setRoles(List<GrantedAuthority> roles) {
+    public void setRoles(Set<String> roles) {
         this.roles = roles;
     }
 
@@ -76,9 +94,19 @@ public class User implements UserDetails {
         this.email = email;
     }
 
-    public String getAadhaar() {
+    private String getAadhaar() {
         return aadhaar;
     }
 
-
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId='" + userId + '\'' +
+                ", username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                ", roles=" + roles +
+                ", email='" + email + '\'' +
+                ", aadhaar='" + aadhaar + '\'' +
+                '}';
+    }
 }
